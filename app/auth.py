@@ -19,17 +19,20 @@ def get_password_hash(password):
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
+# 엑세스 토큰 생성
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+# 리프레시 토큰 생성
 def create_refresh_token(data: dict):
     expire = datetime.utcnow() + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
     to_encode = {"exp": expire, **data}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+# 최근 유저 확인
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -43,6 +46,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     return user
 
+# 회원가입 요청
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == user.username).first()
     if existing_user:
@@ -50,9 +54,10 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     new_user = User(username=user.username, hashed_password=get_password_hash(user.password))
     db.add(new_user)
     db.commit()
-    db.refresh(new_user)
+    db.refresh(new_user) # 데이터베이스에서 최신 정보를 다시 조회하여 new_user 객체를 업데이트
     return UserResponse.from_orm(new_user)
 
+# 로그인 요청
 def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
@@ -61,6 +66,7 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
     refresh_token = create_refresh_token({"sub": user.username})
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
+# 리프레시 토큰 재발급
 def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -72,5 +78,6 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     access_token = create_access_token({"sub": username})
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
+# 최신 유저 확인
 def get_my_info(current_user: User = Depends(get_current_user)):
     return current_user

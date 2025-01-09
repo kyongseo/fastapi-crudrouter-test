@@ -3,8 +3,8 @@ from fastapi_crudrouter import SQLAlchemyCRUDRouter
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth import register_user, login_user, refresh_token, get_my_info, get_current_user
-from app.models import Post
-from app.schemas import PostCreate, PostResponse
+from app.models import Post, Company
+from app.schemas import PostCreate, PostResponse, CompanyCreate, CompanyResponse
 
 app = FastAPI()
 
@@ -23,3 +23,12 @@ post_router = SQLAlchemyCRUDRouter(
     dependencies=[Depends(get_current_user)]
 )
 app.include_router(post_router, prefix="/posts", tags=["Posts"])
+
+# Company CRUD Router
+company_router = SQLAlchemyCRUDRouter(
+    schema = CompanyResponse,
+    create_schema = CompanyCreate,
+    db_model = Company,
+    db=get_db,
+    dependencies=[Depends(get)]
+)

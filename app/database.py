@@ -13,6 +13,6 @@ Base = declarative_base()
 def get_db():
     db = SessionLocal()
     try:
-        yield db
+        yield db # yield 키워드를 사용해서 제너레이터(이터레이터를 생성해주는 함수) 생성
     finally:
         db.close()
